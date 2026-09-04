@@ -99,3 +99,19 @@ uv run ruff format . && uv run ruff check .
 ```
 
 Layout and design notes for AI assistants are in `CLAUDE.md`.
+
+## Visual draft room (optional)
+
+[fantasy-football-draft-room](https://github.com/ItsTitle/fantasy-football-draft-room) is a
+free local web app with a no-clock mock room and a live board that mirrors a Sleeper draft.
+It complements `bongo draft live`: same league id, and it accepts our rankings.
+
+```bash
+uv run bongo draft export                 # writes outputs/rankings.csv (Rank, Player, Position, Team, Tier, Notes)
+git clone https://github.com/ItsTitle/fantasy-football-draft-room ../fantasy-football-draft-room
+cd ../fantasy-football-draft-room && npm run install:all && npm run dev   # http://localhost:5177
+```
+
+In the app: paste league id `1365790508172992512`, pick your manager, upload `outputs/rankings.csv`
+as your rankings (the Notes column shows value, VBD, ADP and injury history under each player),
+then run mocks or switch to assistant mode on draft night.

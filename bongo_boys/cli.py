@@ -20,6 +20,8 @@ def main(argv: list[str] | None = None) -> None:
     lv = d.add_parser("live", help="live draft assistant")
     lv.add_argument("--once", action="store_true")
     lv.add_argument("--interval", type=int, default=15)
+    ex = d.add_parser("export", help="rankings CSV (Rank, Player, Position, Team, Tier, Notes)")
+    ex.add_argument("--out", default="outputs/rankings.csv")
     bd = d.add_parser("board", help="tiered draft board (markdown)")
     bd.add_argument("--out", default="outputs/board.md")
 
@@ -43,6 +45,10 @@ def main(argv: list[str] | None = None) -> None:
         from bongo_boys.draft.live import report, watch
 
         print(report()) if a.once else watch(a.interval)
+    elif a.cmd == "draft" and a.sub == "export":
+        from bongo_boys.draft.export import export
+
+        print("written", export(a.out))
     elif a.cmd == "draft" and a.sub == "board":
         from pathlib import Path
 

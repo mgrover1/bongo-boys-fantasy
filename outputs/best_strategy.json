@@ -1,0 +1,112 @@
+{
+  "params": {
+    "need_bonus": 30.819,
+    "flex_bonus": 9.742,
+    "depth_quota_rb": 4,
+    "depth_quota_wr": 5,
+    "depth_quota_te": 3,
+    "depth_quota_qb": 2,
+    "surplus_penalty": 36.068,
+    "bench_bonus": 4.417,
+    "wait_discount": 0.162,
+    "wait_margin": 3.862,
+    "kdef_rounds_from_end": 3,
+    "injury_penalty": 26.048,
+    "rb_early_bonus": 9.462,
+    "qb_earliest_round": 5,
+    "te_earliest_round": 4,
+    "avail_sigma": 4.287,
+    "avail_strength": 0.384,
+    "cliff_gap": 31.87,
+    "cliff_bonus": 22.763
+  },
+  "result": {
+    "score": 1897.9,
+    "score_std": 119.0,
+    "mean_rank": 4.62,
+    "p_top3": 0.45,
+    "n_sims": 2700,
+    "sample_roster": [
+      "De'Von Achane",
+      "DeVonta Smith",
+      "Derrick Henry",
+      "Emeka Egbuka",
+      "Travis Etienne",
+      "Harold Fannin",
+      "Bo Nix",
+      "Matthew Stafford",
+      "Kenny Gainwell",
+      "Hunter Henry",
+      "Dalton Schultz",
+      "Khalil Shakir",
+      "Minnesota Vikings",
+      "Chase McLaughlin",
+      "Tre Tucker"
+    ],
+    "most_drafted": [
+      [
+        "De'Von Achane",
+        1200
+      ],
+      [
+        "DeVonta Smith",
+        1200
+      ],
+      [
+        "Bo Nix",
+        1188
+      ],
+      [
+        "Dalton Schultz",
+        1068
+      ],
+      [
+        "Hunter Henry",
+        1021
+      ],
+      [
+        "Derrick Henry",
+        987
+      ],
+      [
+        "George Kittle",
+        895
+      ],
+      [
+        "Minnesota Vikings",
+        872
+      ],
+      [
+        "Wan'Dale Robinson",
+        841
+      ],
+      [
+        "Tre Tucker",
+        837
+      ],
+      [
+        "Kenny Gainwell",
+        789
+      ],
+      [
+        "Chase McLaughlin",
+        711
+      ],
+      [
+        "Travis Etienne",
+        666
+      ],
+      [
+        "Michael Pittman",
+        662
+      ],
+      [
+        "Zay Flowers",
+        629
+      ]
+    ],
+    "screen_score": 1896.0
+  },
+  "description": "autoresearch 540",
+  "saved_at": "2026-09-04T18:52:22.881332+00:00"
+}
