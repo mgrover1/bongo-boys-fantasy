@@ -1,46 +1,46 @@
 {
   "params": {
-    "need_bonus": 27.898,
-    "flex_bonus": 9.237,
+    "need_bonus": 62.732,
+    "flex_bonus": 9.471,
     "depth_quota_rb": 5,
-    "depth_quota_wr": 4,
+    "depth_quota_wr": 7,
     "depth_quota_te": 3,
     "depth_quota_qb": 3,
-    "surplus_penalty": 81.426,
-    "bench_bonus": 8.459,
-    "wait_discount": -0.143,
-    "wait_margin": 7.435,
+    "surplus_penalty": 35.823,
+    "bench_bonus": 4.98,
+    "wait_discount": -0.268,
+    "wait_margin": 10.294,
     "kdef_rounds_from_end": 3,
-    "injury_penalty": 90.241,
-    "rb_early_bonus": 7.526,
-    "qb_earliest_round": 5,
-    "te_earliest_round": 3,
-    "avail_sigma": 0.0,
-    "avail_strength": -0.141,
-    "cliff_gap": 0.0,
-    "cliff_bonus": 15.096
+    "injury_penalty": 82.538,
+    "rb_early_bonus": 11.141,
+    "qb_earliest_round": 6,
+    "te_earliest_round": 1,
+    "avail_sigma": 9.105,
+    "avail_strength": -0.163,
+    "cliff_gap": 8.894,
+    "cliff_bonus": 10.076
   },
   "result": {
-    "score": 2191.4,
-    "score_std": 192.3,
-    "mean_rank": 3.33,
-    "p_top3": 0.619,
+    "score": 2202.4,
+    "score_std": 195.8,
+    "mean_rank": 3.17,
+    "p_top3": 0.66,
     "n_sims": 1000,
     "sample_roster": [
       "De'Von Achane",
       "DeVonta Smith",
-      "Derrick Henry",
-      "Emeka Egbuka",
-      "Travis Etienne",
-      "Harold Fannin",
-      "Makai Lemon",
-      "Matthew Stafford",
+      "Trey McBride",
+      "Zay Flowers",
+      "D'Andre Swift",
       "Bo Nix",
+      "Kenny Gainwell",
       "Jared Goff",
+      "Wan'Dale Robinson",
+      "Patrick Mahomes",
       "Dalton Schultz",
       "Khalil Shakir",
       "Minnesota Vikings",
-      "Chris Boswell",
+      "Chase McLaughlin",
       "AJ Barner"
     ],
     "most_drafted": [
@@ -53,60 +53,60 @@
         400
       ],
       [
-        "Dalton Schultz",
+        "Bo Nix",
         400
       ],
       [
-        "Derrick Henry",
-        335
+        "Jared Goff",
+        398
       ],
       [
-        "Travis Kelce",
-        325
+        "Dalton Schultz",
+        397
       ],
       [
         "Wan'Dale Robinson",
-        319
+        376
       ],
       [
-        "AJ Barner",
-        303
+        "Trey McBride",
+        372
+      ],
+      [
+        "Kenny Gainwell",
+        310
+      ],
+      [
+        "Khalil Shakir",
+        304
       ],
       [
         "Minnesota Vikings",
-        301
-      ],
-      [
-        "Bo Nix",
-        297
-      ],
-      [
-        "Chase McLaughlin",
-        242
+        290
       ],
       [
         "Travis Etienne",
-        240
+        261
       ],
       [
-        "Jared Goff",
-        237
+        "Chase McLaughlin",
+        227
       ],
       [
         "Zay Flowers",
-        213
+        208
       ],
       [
-        "D'Andre Swift",
-        206
+        "Baker Mayfield",
+        204
       ],
       [
-        "Patrick Mahomes",
-        199
+        "AJ Barner",
+        196
       ]
     ],
-    "screen_score": 2179.0
+    "screen_score": 2225.3
   },
-  "description": "autoresearch 0",
-  "saved_at": "2026-09-04T16:42:44.634725+00:00"
+  "description": "autoresearch 43",
+  "saved_at": "2026-09-04T16:48:29.507689+00:00"
 }
