@@ -21,14 +21,17 @@ ADP_NOISE_BASE = 4.0  # picks of noise every opponent applies to ADP (Sleeper CP
 ADP_NOISE_FRAC = 0.06  # plus this fraction of the ADP itself; humans are noisier than CPUs
 UNDRAFTED_ADP_OFFSET = 180  # players with no ADP are ordered by search_rank after this
 OPP_MAX_AT_POS = {"QB": 2, "RB": 7, "WR": 7, "TE": 2, "K": 1, "DEF": 1}
-OPP_KDEF_EARLIEST_ROUND_FROM_END = 7  # opponents may take K/DEF in the last 7 rounds (mock: first DEF pick 87)
+OPP_KDEF_EARLIEST_ROUND_FROM_END = (
+    7  # opponents may take K/DEF in the last 7 rounds (mock: first DEF pick 87)
+)
 OPP_KDEF_FILL_ROUNDS_FROM_END = 2  # ... and fill a missing K/DEF in the last 2
 OPP_NEED_BONUS = 12.0  # ADP picks shaved off a candidate that fills an empty starter slot
 SEASON_SIGMA = {"QB": 0.20, "RB": 0.32, "WR": 0.30, "TE": 0.35, "K": 0.25, "DEF": 0.30}
 INJURY_PRIOR_GAMES = 17  # shrink each player's miss rate toward the league average
 INJURY_PRIOR_RATE = 0.12
-BENCH_WEIGHT = 0.20  # season value credited for each of the best `BENCH_DEPTH` bench players
-BENCH_DEPTH = 3
+BENCH_WEIGHT = 0.35  # credit per bench player for his value OVER positional replacement
+BENCH_DEPTH = 4
+REPLACEMENT_EXTRA = {"QB": 4, "RB": 14, "WR": 14, "TE": 4}  # free-agent level = starters + this
 BASELINE_DEPTH_FUZZ = 0  # reserved
 
 
@@ -90,8 +93,27 @@ def sample_season(p: Player, rng: random.Random) -> float:
     return ppg * games * math.exp(rng.gauss(-(sigma**2) / 2, sigma))
 
 
-def lineup_value(players: list[Player], league: LeagueConfig, realized: dict[str, float]) -> float:
-    """Best starting lineup by season totals plus a bench credit."""
+def replacement_levels(league: LeagueConfig, pool: dict[str, Player]) -> dict[str, float]:
+    """Season value of the best player likely to sit on waivers all year, per position."""
+    demand = starter_demand(league, pool)
+    by_pos: dict[str, list[Player]] = {}
+    for p in pool.values():
+        by_pos.setdefault(p.pos, []).append(p)
+    out = {}
+    for pos, lst in by_pos.items():
+        lst.sort(key=lambda x: -x.value)
+        n = demand.get(pos, 0) + REPLACEMENT_EXTRA.get(pos, 2)
+        out[pos] = lst[min(n, len(lst)) - 1].value if lst else 0.0
+    return out
+
+
+def lineup_value(
+    players: list[Player],
+    league: LeagueConfig,
+    realized: dict[str, float],
+    replacement: dict[str, float] | None = None,
+) -> float:
+    """Best starting lineup by season totals plus bench credit over replacement level."""
     remaining = sorted(players, key=lambda p: -realized.get(p.id, 0.0))
     used: set[str] = set()
     total = 0.0
@@ -229,7 +251,8 @@ def _run_sim(args: tuple) -> tuple[float, int, list[str]]:
     rng = random.Random(seed * 100_003 + i)
     rosters = simulate_draft(setup, strategy, rng)
     realized = {pid: sample_season(p, rng) for pid, p in setup.pool.items()}
-    vals = {rid: lineup_value(ps, setup.league, realized) for rid, ps in rosters.items()}
+    repl = replacement_levels(setup.league, setup.pool)
+    vals = {rid: lineup_value(ps, setup.league, realized, repl) for rid, ps in rosters.items()}
     mine = vals[setup.my_roster_id]
     rank = 1 + sum(1 for v in vals.values() if v > mine)
     return mine, rank, [p.name for p in rosters[setup.my_roster_id]]

@@ -86,7 +86,8 @@ uv sync
 uv run bongo draft board                 # tiered board -> outputs/board.md
 uv run bongo draft live [--once]         # live draft assistant (polls every 15 s)
 uv run bongo draft loop --desc "..."     # evaluate current strategy.py, log, keep if best
-uv run bongo draft loop --search 30      # random search over PARAMS (~20 s per iteration)
+uv run bongo draft loop --search 30      # random search over PARAMS (~3 s per iteration)
+uv run bongo draft loop --auto --hours 5 # continuous hill-climb; screen 200 sims, confirm 1000
 uv run bongo available                   # waiver wire report
 uv run bongo trades [--partner NAME]     # trade finder
 uv run bongo briefing [--week N]         # what to do today / this week

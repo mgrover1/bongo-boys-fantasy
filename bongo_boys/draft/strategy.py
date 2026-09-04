@@ -3,6 +3,8 @@ whatever scores best under `prepare.evaluate`. Keep tunables in PARAMS."""
 
 from __future__ import annotations
 
+import math
+
 from bongo_boys.draft.prepare import PickContext
 from bongo_boys.projections import Player
 
@@ -23,6 +25,12 @@ PARAMS: dict[str, float] = {
     "rb_early_bonus": 6.0,  # small scarcity nudge for RB in rounds 1-4
     "qb_earliest_round": 5,
     "te_earliest_round": 3,
+    # availability model: P(gone before my next pick) = sigmoid((next_pick - adp) / avail_sigma)
+    "avail_sigma": 0.0,  # 0 -> use the hard wait_margin cutoff above
+    "avail_strength": 0.6,  # score *= 1 - avail_strength * P(still available next pick)
+    # tier cliff: bonus when p is the best left at his position and the drop to the next is big
+    "cliff_gap": 0.0,  # 0 -> off; else gap (value points) that counts as a cliff
+    "cliff_bonus": 15.0,
 }
 
 SKILL = ("QB", "RB", "WR", "TE")
@@ -43,8 +51,43 @@ def dedicated_slots(ctx: PickContext) -> dict[str, int]:
     return d
 
 
-def score_player(p: Player, ctx: PickContext, params: dict[str, float]) -> float:
-    counts = roster_counts(ctx.my_roster)
+def pos_gaps(ctx: PickContext) -> dict[str, tuple[str, float]]:
+    """Per position: (best available player id, value gap to the next best)."""
+    best: dict[str, list[float]] = {}
+    ids: dict[str, str] = {}
+    for p in ctx.available.values():
+        lst = best.setdefault(p.pos, [])
+        if not lst or p.value > lst[0]:
+            if lst:
+                lst.insert(0, p.value)
+            else:
+                lst.append(p.value)
+            ids[p.pos] = p.id
+        elif len(lst) < 2 or p.value > lst[1]:
+            lst.insert(1, p.value)
+        del lst[2:]
+    return {pos: (ids[pos], (v[0] - v[1]) if len(v) > 1 else 0.0) for pos, v in best.items()}
+
+
+def p_available(p: Player, ctx: PickContext, params: dict[str, float]) -> float:
+    if ctx.next_pick_no is None:
+        return 0.0
+    sigma = params.get("avail_sigma", 0.0)
+    if sigma <= 0:
+        return 1.0 if p.adp > ctx.next_pick_no + params["wait_margin"] else 0.0
+    x = (p.adp - ctx.next_pick_no) / sigma
+    x = max(-30.0, min(30.0, x))
+    return 1.0 / (1.0 + math.exp(-x))
+
+
+def score_player(
+    p: Player,
+    ctx: PickContext,
+    params: dict[str, float],
+    counts: dict[str, int] | None = None,
+    gaps: dict[str, tuple[str, float]] | None = None,
+) -> float:
+    counts = counts if counts is not None else roster_counts(ctx.my_roster)
     slots = dedicated_slots(ctx)
     c = counts.get(p.pos, 0)
     limit = ctx.league.position_limits.get(p.pos)
@@ -72,8 +115,15 @@ def score_player(p: Player, ctx: PickContext, params: dict[str, float]) -> float
         s -= params["surplus_penalty"]
     if p.pos in ("RB", "WR") and c >= slots.get(p.pos, 0):
         s += params["bench_bonus"]  # bench RB/WR cover injuries and byes
-    if ctx.next_pick_no is not None and p.adp > ctx.next_pick_no + params["wait_margin"]:
-        s *= params["wait_discount"] if s > 0 else 1.0
+    if s > 0 and ctx.next_pick_no is not None:
+        if params.get("avail_sigma", 0.0) > 0:
+            s *= 1.0 - params["avail_strength"] * p_available(p, ctx, params)
+        elif p.adp > ctx.next_pick_no + params["wait_margin"]:
+            s *= params["wait_discount"]
+    if params.get("cliff_gap", 0.0) > 0 and gaps is not None:
+        best_id, gap = gaps.get(p.pos, ("", 0.0))
+        if best_id == p.id and gap >= params["cliff_gap"]:
+            s += params["cliff_bonus"]
     s -= params["injury_penalty"] * p.miss_rate
     if p.pos == "RB" and ctx.round <= 4:
         s += params["rb_early_bonus"]
@@ -86,7 +136,9 @@ def rank_available(
     ctx: PickContext, params: dict[str, float] | None = None
 ) -> list[tuple[float, Player]]:
     params = params or PARAMS
-    ranked = [(score_player(p, ctx, params), p) for p in ctx.available.values()]
+    counts = roster_counts(ctx.my_roster)
+    gaps = pos_gaps(ctx) if params.get("cliff_gap", 0.0) > 0 else None
+    ranked = [(score_player(p, ctx, params, counts, gaps), p) for p in ctx.available.values()]
     ranked.sort(key=lambda t: -t[0])
     return ranked
 

@@ -15,6 +15,8 @@ def main(argv: list[str] | None = None) -> None:
     lp.add_argument("--search", type=int, default=0)
     lp.add_argument("--sims", type=int, default=0)
     lp.add_argument("--seed", type=int, default=0)
+    lp.add_argument("--auto", action="store_true", help="continuous hill-climb")
+    lp.add_argument("--hours", type=float, default=4.0)
     lv = d.add_parser("live", help="live draft assistant")
     lv.add_argument("--once", action="store_true")
     lv.add_argument("--interval", type=int, default=15)
@@ -31,9 +33,12 @@ def main(argv: list[str] | None = None) -> None:
 
     a = ap.parse_args(argv)
     if a.cmd == "draft" and a.sub == "loop":
-        from bongo_boys.draft.loop import run
+        from bongo_boys.draft.loop import autoresearch, run
 
-        run(desc=a.desc, search=a.search, n_sims=a.sims, seed=a.seed)
+        if a.auto:
+            autoresearch(hours=a.hours, seed=a.seed)
+        else:
+            run(desc=a.desc, search=a.search, n_sims=a.sims, seed=a.seed)
     elif a.cmd == "draft" and a.sub == "live":
         from bongo_boys.draft.live import report, watch
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from bongo_boys import LEAGUE_ID, MY_ROSTER_ID, SEASON
-from bongo_boys.draft.prepare import baselines, lineup_value
+from bongo_boys.draft.prepare import baselines, lineup_value, replacement_levels
 from bongo_boys.league import LeagueConfig, Roster, fetch_rosters
 from bongo_boys.projections import Player, build_pool
 from bongo_boys.sleeper import Sleeper
@@ -34,7 +34,8 @@ class Context:
         return sorted((p for p in self.pool.values() if p.id not in taken), key=lambda p: -p.value)
 
     def team_value(self, players: list[Player]) -> float:
-        return lineup_value(players, self.league, {p.id: p.value for p in players})
+        repl = replacement_levels(self.league, self.pool)
+        return lineup_value(players, self.league, {p.id: p.value for p in players}, repl)
 
     def starters(self, players: list[Player]) -> list[Player]:
         """Deterministic best lineup by season value (same slot logic as the sim metric)."""
