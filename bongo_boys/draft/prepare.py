@@ -141,12 +141,18 @@ def season_value(
     weekly: dict[str, list[float]],
     replacement_ppg: dict[str, float],
 ) -> float:
-    """Sum over weeks of the best lineup from the roster; empty slots get waiver replacement."""
+    """Sum over weeks of realized points from a lineup chosen on EXPECTED points.
+
+    The manager knows who is out or on bye each week, but not who will have the big game,
+    so starters are the healthy players with the highest projected per-game value."""
     slots = league.starter_slots
     order = [s for s in slots if s not in FLEX_ELIGIBLE] + [s for s in slots if s in FLEX_ELIGIBLE]
+    by_expected = sorted(
+        players, key=lambda p: -(p.value / p.expected_games if p.expected_games else 0.0)
+    )
     total = 0.0
     for wk in range(WEEKS):
-        avail = sorted(players, key=lambda p: -weekly[p.id][wk])
+        avail = by_expected
         used: set[str] = set()
         for s in order:
             eligible = FLEX_ELIGIBLE.get(s, (s,))
