@@ -1,0 +1,11 @@
+__pycache__/
+.venv/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+outputs/*
+!outputs/results.tsv
+!outputs/best_strategy.json
+!outputs/.gitkeep
+news/log.jsonl
+news/injury_snapshot.json

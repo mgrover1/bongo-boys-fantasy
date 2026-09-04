@@ -1,0 +1,106 @@
+{
+  "params": {
+    "need_bonus": 10.978,
+    "flex_bonus": 6.991,
+    "depth_quota_rb": 2,
+    "depth_quota_wr": 5,
+    "depth_quota_te": 1,
+    "depth_quota_qb": 3,
+    "surplus_penalty": 6.993,
+    "wait_discount": 0.446,
+    "wait_margin": 4.325,
+    "kdef_rounds_from_end": 5,
+    "injury_penalty": 116.878,
+    "rb_early_bonus": 12.589,
+    "qb_earliest_round": 7,
+    "te_earliest_round": 3
+  },
+  "result": {
+    "score": 2088.9,
+    "score_std": 194.3,
+    "mean_rank": 3.08,
+    "p_top3": 0.67,
+    "n_sims": 200,
+    "sample_roster": [
+      "De'Von Achane (RB MIA)",
+      "DeVonta Smith (WR PHI)",
+      "Derrick Henry (RB BAL)",
+      "Zay Flowers (WR BAL)",
+      "Emeka Egbuka (WR TB)",
+      "Courtland Sutton (WR DEN)",
+      "Bo Nix (QB DEN)",
+      "Jake Ferguson (TE DAL)",
+      "Matthew Stafford (QB LAR)",
+      "Wan'Dale Robinson (WR TEN)",
+      "Seattle Seahawks (DEF SEA)",
+      "Jason Myers (K SEA)",
+      "Baker Mayfield (QB TB)",
+      "Dalton Schultz (TE HOU)",
+      "AJ Barner (TE SEA)"
+    ],
+    "most_drafted": [
+      [
+        "De'Von Achane",
+        200
+      ],
+      [
+        "DeVonta Smith",
+        200
+      ],
+      [
+        "Seattle Seahawks",
+        200
+      ],
+      [
+        "Jason Myers",
+        198
+      ],
+      [
+        "Dalton Schultz",
+        194
+      ],
+      [
+        "Bo Nix",
+        187
+      ],
+      [
+        "Jared Goff",
+        180
+      ],
+      [
+        "AJ Barner",
+        179
+      ],
+      [
+        "Derrick Henry",
+        170
+      ],
+      [
+        "Chig Okonkwo",
+        140
+      ],
+      [
+        "Wan'Dale Robinson",
+        129
+      ],
+      [
+        "Courtland Sutton",
+        128
+      ],
+      [
+        "Travis Etienne",
+        122
+      ],
+      [
+        "Zay Flowers",
+        109
+      ],
+      [
+        "Matthew Stafford",
+        70
+      ]
+    ]
+  },
+  "description": "search iter 7",
+  "saved_at": "2026-09-04T16:21:07.206982+00:00"
+}
