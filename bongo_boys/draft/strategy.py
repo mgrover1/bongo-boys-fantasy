@@ -14,7 +14,8 @@ PARAMS: dict[str, float] = {
     "depth_quota_wr": 5,
     "depth_quota_te": 2,
     "depth_quota_qb": 2,
-    "surplus_penalty": 40.0,  # subtracted once a position is at/over its quota
+    "surplus_penalty": 40.0,
+    "bench_bonus": 10.0,  # added to RB/WR once their starter slots are filled  # subtracted once a position is at/over its quota
     "wait_discount": 0.55,  # multiply score if the player will very likely be there next pick
     "wait_margin": 6.0,  # "likely there" = adp > next_pick_no + wait_margin
     "kdef_rounds_from_end": 2,  # never draft K/DEF earlier than this
@@ -66,7 +67,11 @@ def score_player(p: Player, ctx: PickContext, params: dict[str, float]) -> float
         s += params["flex_bonus"]
     quota = params.get(f"depth_quota_{p.pos.lower()}", 9)
     if c >= quota:
+        if p.pos in ("QB", "TE"):
+            return -1e8  # a 3rd QB / 2nd+ TE never starts; hard cap
         s -= params["surplus_penalty"]
+    if p.pos in ("RB", "WR") and c >= slots.get(p.pos, 0):
+        s += params["bench_bonus"]  # bench RB/WR cover injuries and byes
     if ctx.next_pick_no is not None and p.adp > ctx.next_pick_no + params["wait_margin"]:
         s *= params["wait_discount"] if s > 0 else 1.0
     s -= params["injury_penalty"] * p.miss_rate
@@ -90,8 +95,15 @@ def choose(ctx: PickContext, params: dict[str, float] | None = None) -> str:
     return rank_available(ctx, params)[0][1].id
 
 
-def make_strategy(params: dict[str, float]):
-    def _s(ctx: PickContext) -> str:
-        return choose(ctx, params)
+class Strategy:
+    """Picklable callable so evaluate() can fan out across processes."""
 
-    return _s
+    def __init__(self, params: dict[str, float] | None = None):
+        self.params = dict(params or PARAMS)
+
+    def __call__(self, ctx: PickContext) -> str:
+        return choose(ctx, self.params)
+
+
+def make_strategy(params: dict[str, float]) -> Strategy:
+    return Strategy(params)

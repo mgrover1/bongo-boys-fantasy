@@ -7,7 +7,9 @@ Defines the opponent model, the season-outcome sampler, the team-value metric, a
 from __future__ import annotations
 
 import math
+import os
 import random
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 
 from bongo_boys.league import FLEX_ELIGIBLE, LeagueConfig, slot_of_pick
@@ -15,11 +17,11 @@ from bongo_boys.projections import Player
 
 # --- fixed constants ----------------------------------------------------------
 N_SIMS = 200
-ADP_NOISE_BASE = 3.0  # picks of noise every opponent applies to ADP
-ADP_NOISE_FRAC = 0.12  # plus this fraction of the ADP itself (late picks are chaotic)
+ADP_NOISE_BASE = 4.0  # picks of noise every opponent applies to ADP (Sleeper CPU mock: sd ~5.5)
+ADP_NOISE_FRAC = 0.06  # plus this fraction of the ADP itself; humans are noisier than CPUs
 UNDRAFTED_ADP_OFFSET = 180  # players with no ADP are ordered by search_rank after this
 OPP_MAX_AT_POS = {"QB": 2, "RB": 7, "WR": 7, "TE": 2, "K": 1, "DEF": 1}
-OPP_KDEF_EARLIEST_ROUND_FROM_END = 4  # opponents ignore K/DEF until the last 4 rounds
+OPP_KDEF_EARLIEST_ROUND_FROM_END = 7  # opponents may take K/DEF in the last 7 rounds (mock: first DEF pick 87)
 OPP_KDEF_FILL_ROUNDS_FROM_END = 2  # ... and fill a missing K/DEF in the last 2
 OPP_NEED_BONUS = 12.0  # ADP picks shaved off a candidate that fills an empty starter slot
 SEASON_SIGMA = {"QB": 0.20, "RB": 0.32, "WR": 0.30, "TE": 0.35, "K": 0.25, "DEF": 0.30}
@@ -222,22 +224,34 @@ def simulate_draft(setup: DraftSetup, strategy, rng: random.Random) -> dict[int,
     return rosters
 
 
-def evaluate(setup: DraftSetup, strategy, n_sims: int = N_SIMS, seed: int = 0) -> dict:
-    scores, ranks = [], []
-    sample_roster: list[Player] = []
+def _run_sim(args: tuple) -> tuple[float, int, list[str]]:
+    setup, strategy, seed, i = args
+    rng = random.Random(seed * 100_003 + i)
+    rosters = simulate_draft(setup, strategy, rng)
+    realized = {pid: sample_season(p, rng) for pid, p in setup.pool.items()}
+    vals = {rid: lineup_value(ps, setup.league, realized) for rid, ps in rosters.items()}
+    mine = vals[setup.my_roster_id]
+    rank = 1 + sum(1 for v in vals.values() if v > mine)
+    return mine, rank, [p.name for p in rosters[setup.my_roster_id]]
+
+
+def evaluate(
+    setup: DraftSetup, strategy, n_sims: int = N_SIMS, seed: int = 0, workers: int = 0
+) -> dict:
+    """Run n_sims drafts in parallel processes (workers=0 -> all cores, 1 -> in-process)."""
+    workers = workers or int(os.environ.get("BONGO_WORKERS", "0")) or (os.cpu_count() or 1)
+    jobs = [(setup, strategy, seed, i) for i in range(n_sims)]
+    if workers > 1 and n_sims > 1:
+        with ProcessPoolExecutor(max_workers=workers) as ex:
+            results = list(ex.map(_run_sim, jobs, chunksize=max(1, n_sims // (workers * 4))))
+    else:
+        results = [_run_sim(j) for j in jobs]
+    scores = [r[0] for r in results]
+    ranks = [r[1] for r in results]
     pick_counts: dict[str, int] = {}
-    for i in range(n_sims):
-        rng = random.Random(seed * 100_003 + i)
-        rosters = simulate_draft(setup, strategy, rng)
-        realized = {pid: sample_season(p, rng) for pid, p in setup.pool.items()}
-        vals = {rid: lineup_value(ps, setup.league, realized) for rid, ps in rosters.items()}
-        mine = vals[setup.my_roster_id]
-        scores.append(mine)
-        ranks.append(1 + sum(1 for v in vals.values() if v > mine))
-        if i == 0:
-            sample_roster = rosters[setup.my_roster_id]
-        for p in rosters[setup.my_roster_id]:
-            pick_counts[p.name] = pick_counts.get(p.name, 0) + 1
+    for _, _, names in results:
+        for n in names:
+            pick_counts[n] = pick_counts.get(n, 0) + 1
     mean = sum(scores) / len(scores)
     std = (sum((s - mean) ** 2 for s in scores) / max(1, len(scores) - 1)) ** 0.5
     return {
@@ -246,6 +260,6 @@ def evaluate(setup: DraftSetup, strategy, n_sims: int = N_SIMS, seed: int = 0) -
         "mean_rank": round(sum(ranks) / len(ranks), 2),
         "p_top3": round(sum(1 for r in ranks if r <= 3) / len(ranks), 3),
         "n_sims": n_sims,
-        "sample_roster": [p.label for p in sample_roster],
+        "sample_roster": results[0][2],
         "most_drafted": sorted(pick_counts.items(), key=lambda kv: -kv[1])[:15],
     }

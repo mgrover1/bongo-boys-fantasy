@@ -39,9 +39,14 @@ def log_result(res: dict, status: str, desc: str) -> None:
         )
 
 
-def best_score() -> float:
+def best_score(n_sims: int = 0) -> float:
+    """Best score so far; -inf if the best was measured with fewer sims than `n_sims`
+    (results are only comparable at equal or greater sim counts)."""
     if BEST_PARAMS.exists():
-        return float(json.loads(BEST_PARAMS.read_text())["result"]["score"])
+        best = json.loads(BEST_PARAMS.read_text())["result"]
+        if n_sims and int(best.get("n_sims", 0)) > n_sims:
+            return float("inf")
+        return float(best["score"])
     return float("-inf")
 
 
@@ -64,6 +69,8 @@ def perturb(params: dict[str, float], rng: random.Random) -> dict[str, float]:
     for k, v in params.items():
         if k.endswith("_round") or k.startswith("depth_quota") or k.endswith("_from_end"):
             out[k] = max(1, int(round(v + rng.choice([-1, 0, 0, 1]))))
+            if k == "kdef_rounds_from_end":
+                out[k] = min(out[k], 3)  # never burn a mid-round pick on K/DEF
         else:
             out[k] = round(v * (1 + rng.gauss(0, SEARCH_SCALE)), 3)
     return out
@@ -75,7 +82,7 @@ def run(desc: str = "", search: int = 0, n_sims: int = 0, seed: int = 0) -> None
     if not search:
         params = load_params()
         res = evaluate(setup, make_strategy(params), seed=seed, **kw)
-        status = "keep" if res["score"] > best_score() else "discard"
+        status = "keep" if res["score"] > best_score(res["n_sims"]) else "discard"
         if status == "keep":
             save_best(params, res, desc or "strategy.py edit")
         log_result(res, status, desc or "strategy.py edit")
@@ -86,14 +93,14 @@ def run(desc: str = "", search: int = 0, n_sims: int = 0, seed: int = 0) -> None
     rng = random.Random(seed or int(time.time()))
     base = load_params()
     incumbent = evaluate(setup, make_strategy(base), seed=seed, **kw)
-    if incumbent["score"] > best_score():
+    if incumbent["score"] > best_score(incumbent["n_sims"]):
         save_best(base, incumbent, "incumbent")
     log_result(incumbent, "baseline", "search baseline")
     print("baseline", incumbent["score"], "+/-", incumbent["score_std"])
     for i in range(search):
         cand = perturb(load_params(), rng)
         res = evaluate(setup, make_strategy(cand), seed=seed, **kw)
-        keep = res["score"] > best_score()
+        keep = res["score"] > best_score(res["n_sims"])
         if keep:
             save_best(cand, res, f"search iter {i}")
         changed = {k: v for k, v in cand.items() if v != base.get(k)}

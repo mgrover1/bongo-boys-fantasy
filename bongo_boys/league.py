@@ -114,12 +114,17 @@ class DraftState:
         cls, api: Sleeper, draft_id: str, my_roster_id: int, picks_ttl: int = 0
     ) -> DraftState:
         d = api.draft(draft_id)
+        slot_to_roster = {int(k): v for k, v in d["slot_to_roster_id"].items()}
+        picks = api.picks(draft_id, ttl=picks_ttl)
+        for p in picks:  # mock drafts leave roster_id empty; derive it from the slot
+            if p.get("roster_id") is None and p.get("draft_slot"):
+                p["roster_id"] = slot_to_roster.get(int(p["draft_slot"]))
         return cls(
             draft_id=draft_id,
             teams=d["settings"]["teams"],
             rounds=d["settings"]["rounds"],
-            slot_to_roster={int(k): v for k, v in d["slot_to_roster_id"].items()},
-            picks=api.picks(draft_id, ttl=picks_ttl),
+            slot_to_roster=slot_to_roster,
+            picks=picks,
             traded=api.traded_picks(draft_id),
             status=d["status"],
             my_roster_id=my_roster_id,

@@ -24,8 +24,7 @@ The user's global `~/.claude/CLAUDE.md` applies: Python + `uv`, ruff, pytest, pl
 | Starters | QB, RB, RB, WR, WR, TE, FLEX, K, DEF + 6 BN + 2 IR |
 | Scoring | Full PPR (rec 1.0), pass TD 4, pass yd 0.04, rush/rec yd 0.1, fum lost -2, int -1; K and DEF scored |
 | Keepers | Max 2 per team; keepers appear as `is_keeper: true` picks and **consume that round's pick**. Mine: DeVonta Smith (`7525`, R5 pick 59) and De'Von Achane (`9226`, R1 pick 11) |
-| My traded-away picks | R4 and R11 (owned by roster 12) |
-| Picks I acquired | Roster 12's R7 |
+| Traded picks | None involve me (roster 5). I hold all 13 non-keeper picks: 14, 35, 38, 62, 83, 86, 107, 110, 131, 134, 155, 158, 179 |
 | Season | Week 1 starts 2026-09-09; trade deadline week 11; playoffs week 15, 6 teams; waivers FAAB $100, clear Wednesdays |
 
 Full raw snapshots for the draft session live in the session scratchpad; regenerate them with the API calls below rather than trusting stale copies.
@@ -109,8 +108,23 @@ per-game noise, so injury-prone players are penalised twice: in value and in var
 
 ## Autoresearch protocol (adapted from autoresearch-mlx)
 
-- `draft/prepare.py` defines the ground truth: simulated 12-team snake drafts from slot 11 with keepers pre-loaded, opponents picking by `search_rank`/ADP with noise, and the metric = projected starting-lineup points (PPR, this league's roster) of the resulting team. Do not edit it inside the loop.
-- `draft/strategy.py` is the only file the loop mutates. Keep hyperparameters as module-level constants near the top.
+- `draft/prepare.py` defines the ground truth: simulated snake drafts from slot 11 with keepers and traded picks loaded, opponents picking by ADP with calibrated noise, and the metric = sampled season lineup value (starters + 0.2 x top-3 bench). Do not edit it inside the loop; changing it invalidates results.tsv, so reset best_strategy.json when you do.
+- `draft/strategy.py` is the only file the loop mutates. Keep tunables in PARAMS. `evaluate()` runs sims across all cores (BONGO_WORKERS=1 for serial); never edit strategy.py while a search is running, worker processes re-import it.
 - Each iteration appends a row to `outputs/results.tsv`: `commit score score_std mean_rank p_top3 n_sims status description`. Keep the change if `score` improves; otherwise revert.
 - Prefer simpler strategies when scores are within one standard deviation.
 - Reality check every strategy against the real `/picks` feed: keepers already remove 24 players from the pool.
+
+## Mock drafts (Sleeper, via Chrome)
+
+Sleeper's "Mock Drafts" button on the league predraft page creates a private CPU mock with the
+league's keepers and my slot. The mock has its own draft id, readable from the same API:
+
+```bash
+BONGO_DRAFT_ID=<mock id> BONGO_MY_ROSTER_ID=<my slot> uv run bongo draft live
+```
+
+Lessons from the 2026-09-04 mock (id 1401637665899618304): CPU opponents pick within about
+5 picks of Sleeper ADP (sd 5.5) and shift ~5 picks early because keepers thin the pool; first
+DEF went at pick 87. CPU picks arrive every few seconds, so the clock is the constraint: keep
+`bongo draft live` (watch mode) running so the recommendation is on screen before my clock
+starts. Auto-pick fires when the 60 s timer expires, in mocks and in the real draft.

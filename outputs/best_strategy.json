@@ -1,42 +1,43 @@
 {
   "params": {
-    "need_bonus": 10.978,
-    "flex_bonus": 6.991,
-    "depth_quota_rb": 2,
-    "depth_quota_wr": 5,
+    "need_bonus": 11.569,
+    "flex_bonus": 8.684,
+    "depth_quota_rb": 7,
+    "depth_quota_wr": 6,
     "depth_quota_te": 1,
-    "depth_quota_qb": 3,
-    "surplus_penalty": 6.993,
-    "wait_discount": 0.446,
-    "wait_margin": 4.325,
-    "kdef_rounds_from_end": 5,
-    "injury_penalty": 116.878,
-    "rb_early_bonus": 12.589,
-    "qb_earliest_round": 7,
-    "te_earliest_round": 3
+    "depth_quota_qb": 4,
+    "surplus_penalty": 7.451,
+    "bench_bonus": 3.651,
+    "wait_discount": 0.231,
+    "wait_margin": 9.317,
+    "kdef_rounds_from_end": 3,
+    "injury_penalty": 8.532,
+    "rb_early_bonus": 4.581,
+    "qb_earliest_round": 5,
+    "te_earliest_round": 1
   },
   "result": {
-    "score": 2088.9,
-    "score_std": 194.3,
-    "mean_rank": 3.08,
-    "p_top3": 0.67,
+    "score": 2080.6,
+    "score_std": 205.9,
+    "mean_rank": 3.36,
+    "p_top3": 0.615,
     "n_sims": 200,
     "sample_roster": [
-      "De'Von Achane (RB MIA)",
-      "DeVonta Smith (WR PHI)",
-      "Derrick Henry (RB BAL)",
-      "Zay Flowers (WR BAL)",
-      "Emeka Egbuka (WR TB)",
-      "Courtland Sutton (WR DEN)",
-      "Bo Nix (QB DEN)",
-      "Jake Ferguson (TE DAL)",
-      "Matthew Stafford (QB LAR)",
-      "Wan'Dale Robinson (WR TEN)",
-      "Seattle Seahawks (DEF SEA)",
-      "Jason Myers (K SEA)",
-      "Baker Mayfield (QB TB)",
-      "Dalton Schultz (TE HOU)",
-      "AJ Barner (TE SEA)"
+      "De'Von Achane",
+      "DeVonta Smith",
+      "Trey McBride",
+      "Zay Flowers",
+      "D'Andre Swift",
+      "Rome Odunze",
+      "Bo Nix",
+      "Patrick Mahomes",
+      "Michael Pittman",
+      "Jared Goff",
+      "Jakobi Meyers",
+      "Deebo Samuel",
+      "Jacksonville Jaguars",
+      "Chase McLaughlin",
+      "Tre Tucker"
     ],
     "most_drafted": [
       [
@@ -48,59 +49,59 @@
         200
       ],
       [
-        "Seattle Seahawks",
-        200
-      ],
-      [
-        "Jason Myers",
-        198
-      ],
-      [
-        "Dalton Schultz",
-        194
-      ],
-      [
         "Bo Nix",
+        196
+      ],
+      [
+        "Trey McBride",
         187
       ],
       [
-        "Jared Goff",
+        "Wan'Dale Robinson",
         180
       ],
       [
-        "AJ Barner",
-        179
-      ],
-      [
-        "Derrick Henry",
+        "Khalil Shakir",
         170
       ],
       [
-        "Chig Okonkwo",
-        140
-      ],
-      [
-        "Wan'Dale Robinson",
-        129
-      ],
-      [
-        "Courtland Sutton",
-        128
+        "Tre Tucker",
+        167
       ],
       [
         "Travis Etienne",
-        122
+        145
+      ],
+      [
+        "Minnesota Vikings",
+        127
+      ],
+      [
+        "Courtland Sutton",
+        126
+      ],
+      [
+        "D'Andre Swift",
+        125
+      ],
+      [
+        "Jared Goff",
+        118
+      ],
+      [
+        "Chase McLaughlin",
+        112
       ],
       [
         "Zay Flowers",
-        109
+        103
       ],
       [
-        "Matthew Stafford",
-        70
+        "Alec Pierce",
+        100
       ]
     ]
   },
-  "description": "search iter 7",
-  "saved_at": "2026-09-04T16:21:07.206982+00:00"
+  "description": "search iter 47",
+  "saved_at": "2026-09-04T16:34:42.335084+00:00"
 }
