@@ -22,13 +22,18 @@ def board(per_pos: int = 36) -> str:
         ps = sorted([p for p in pool.values() if p.pos == pos], key=lambda x: -x.value)[:per_pos]
         ts = tiers(ps)
         out.append(f"## {pos}\n")
-        out.append("|Tier|Player|Team|Value|VBD|ADP|Proj|'25 ppg|Miss%|Status|")
-        out.append("|-|-|-|-|-|-|-|-|-|-|")
+        out.append("|Tier|Player|Team|Value|VBD|ADP|Proj|Roto|ESPN|'25 ppg|Miss%|Status|")
+        out.append("|-|-|-|-|-|-|-|-|-|-|-|-|")
         for p, t in zip(ps, ts, strict=False):
             st = "KEPT" if p.id in drafted else (p.injury_status or "")
             prior = f"{p.prior_ppg:.1f}" if p.prior_ppg else "-"
+            roto = p.proj_sources.get("rotowire")
+            espn = p.proj_sources.get("espn")
             out.append(
-                f"|{t}|{p.name}|{p.team or 'FA'}|{p.value:.0f}|{p.value - base.get(pos, 0):+.0f}|{p.adp:.0f}|{p.proj_pts:.0f}|{prior}|{p.miss_rate:.0%}|{st}|"
+                f"|{t}|{p.name}|{p.team or 'FA'}|{p.value:.0f}|{p.value - base.get(pos, 0):+.0f}|{p.adp:.0f}|{p.proj_pts:.0f}"
+                f"|{roto:.0f}|{espn:.0f}|{prior}|{p.miss_rate:.0%}|{st}|"
+                if roto is not None and espn is not None
+                else f"|{t}|{p.name}|{p.team or 'FA'}|{p.value:.0f}|{p.value - base.get(pos, 0):+.0f}|{p.adp:.0f}|{p.proj_pts:.0f}|{p.proj_pts:.0f}|-|{prior}|{p.miss_rate:.0%}|{st}|"
             )
         out.append("")
     return "\n".join(out)

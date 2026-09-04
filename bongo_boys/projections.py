@@ -13,6 +13,8 @@ PRIOR_SEASONS = 3
 RESCORE_POSITIONS = {"QB", "RB", "WR", "TE"}
 # Default blend: how much to trust last season's per-game output vs the projection.
 PRIOR_WEIGHT = 0.30
+# Weight of ESPN's season projection when blending with Rotowire (via Sleeper).
+ESPN_WEIGHT = 0.5
 # How much of a player's historical missed-game rate to apply to expected games.
 INJURY_WEIGHT = 0.6
 MIN_PRIOR_GAMES = 6
@@ -33,6 +35,7 @@ class Player:
     years_exp: int | None = None
     prior: dict[str, dict] = field(default_factory=dict)  # season -> {gp, pts, ppg, rank}
     prior_ppg: float | None = None  # last season, if enough games
+    proj_sources: dict[str, float] = field(default_factory=dict)  # rotowire / espn season points
     games_missed: int = 0
     games_possible: int = 0
     value: float = 0.0  # injury-adjusted, prior-blended season points (the number tools rank on)
@@ -98,10 +101,39 @@ def build_pool(api: Sleeper, league: LeagueConfig, season: str) -> dict[str, Pla
             age=m.get("age"),
             years_exp=m.get("years_exp"),
         )
+    _blend_espn(api, pool, meta, season)
     _attach_history(api, pool, league, season)
     for p in pool.values():
         p.value = blended_value(p)
     return pool
+
+
+def _blend_espn(api: Sleeper, pool: dict[str, Player], meta: dict, season: str) -> None:
+    """Average Rotowire and ESPN season projections where both exist (QB/RB/WR/TE only)."""
+    try:
+        espn = api.espn_projections(season)
+    except Exception:  # ESPN down: keep single-source projections
+        return
+    by_name = {(_norm(v["name"]), v["pos"]): v["pts"] for v in espn.values()}
+    for p in pool.values():
+        p.proj_sources["rotowire"] = p.proj_pts
+        eid = (meta.get(p.id) or {}).get("espn_id")
+        e = (
+            espn[str(eid)]["pts"]
+            if eid and str(eid) in espn
+            else by_name.get((_norm(p.name), p.pos))
+        )
+        if e and p.pos in RESCORE_POSITIONS:
+            p.proj_sources["espn"] = round(e, 1)
+            p.proj_pts = round((1 - ESPN_WEIGHT) * p.proj_pts + ESPN_WEIGHT * e, 1)
+
+
+def _norm(name: str) -> str:
+    n = name.lower().replace(".", "").replace("'", "").replace("-", " ")
+    for suf in (" jr", " sr", " ii", " iii", " iv"):
+        if n.endswith(suf):
+            n = n[: -len(suf)]
+    return " ".join(n.split())
 
 
 def _attach_history(

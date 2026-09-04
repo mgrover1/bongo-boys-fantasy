@@ -96,6 +96,43 @@ class Sleeper:
         )
         return self.get(url, ttl=3600)
 
+    def espn_projections(self, season: str, limit: int = 700) -> dict[str, dict]:
+        """ESPN full-season PPR projections: espn id -> {pts, name, pos}."""
+        import json as _json
+
+        url = (
+            f"https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/{season}"
+            "/segments/0/leaguedefaults/3?view=kona_player_info"
+        )
+        path = cache_dir() / (hashlib.sha1((url + str(limit)).encode()).hexdigest() + ".json")
+        if path.exists() and (self.offline or time.time() - path.stat().st_mtime < 6 * 3600):
+            return _json.loads(path.read_text())
+        flt = {
+            "players": {
+                "limit": limit,
+                "sortPercOwned": {"sortAsc": False, "sortPriority": 1},
+                "filterStatsForTopScoringPeriodIds": {
+                    "value": 2,
+                    "additionalValue": [f"00{season}", f"10{season}"],
+                },
+            }
+        }
+        resp = self.session.get(url, headers={"x-fantasy-filter": _json.dumps(flt)}, timeout=60)
+        resp.raise_for_status()
+        pos_map = {1: "QB", 2: "RB", 3: "WR", 4: "TE", 5: "K", 16: "DEF"}
+        out: dict[str, dict] = {}
+        for row in resp.json().get("players", []):
+            pl = row.get("player") or {}
+            for st in pl.get("stats") or []:
+                if st.get("id") == f"10{season}" and st.get("appliedTotal"):
+                    out[str(pl["id"])] = {
+                        "pts": float(st["appliedTotal"]),
+                        "name": pl.get("fullName", ""),
+                        "pos": pos_map.get(pl.get("defaultPositionId"), "?"),
+                    }
+        path.write_text(_json.dumps(out))
+        return out
+
     def season_stats(self, season: str) -> list[dict]:
         url = f"{V2}/stats/nfl/{season}?season_type=regular&{self._pos_query()}&order_by=pts_ppr"
         return self.get(url, ttl=7 * DAY)

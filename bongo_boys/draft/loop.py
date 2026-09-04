@@ -7,6 +7,7 @@ uv run bongo draft loop --search 30                 # random search over PARAMS,
 from __future__ import annotations
 
 import json
+import os
 import random
 import subprocess
 import time
@@ -80,8 +81,10 @@ def perturb(params: dict[str, float], rng: random.Random) -> dict[str, float]:
     return out
 
 
-SCREEN_SIMS = 200  # stage 1: quick screen on seed 7
-CONFIRM_SIMS = 400  # stage 2: confirm on seeds 8 and 9; combined score = mean of the three
+SCREEN_SIMS = int(os.environ.get("BONGO_SCREEN_SIMS", "300"))  # stage 1: quick screen on seed 7
+CONFIRM_SIMS = int(
+    os.environ.get("BONGO_CONFIRM_SIMS", "1200")
+)  # stage 2: seeds 8 and 9 (se ~4 at 2700 total)
 CONFIRM_TOTAL = SCREEN_SIMS + 2 * CONFIRM_SIMS
 
 
