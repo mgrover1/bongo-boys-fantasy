@@ -29,9 +29,19 @@ OPP_NEED_BONUS = 12.0  # ADP picks shaved off a candidate that fills an empty st
 SEASON_SIGMA = {"QB": 0.20, "RB": 0.32, "WR": 0.30, "TE": 0.35, "K": 0.25, "DEF": 0.30}
 INJURY_PRIOR_GAMES = 17  # shrink each player's miss rate toward the league average
 INJURY_PRIOR_RATE = 0.12
-BENCH_WEIGHT = 0.35  # credit per bench player for his value OVER positional replacement
+WEEKS = 17  # weeks that count (regular season + playoffs)
+BYE_WEEKS = list(range(5, 15))  # each team gets one random bye week in this range per sim
+WEEKLY_SIGMA = {"QB": 0.35, "RB": 0.45, "WR": 0.50, "TE": 0.55, "K": 0.45, "DEF": 0.55}
+REPLACEMENT_EXTRA = {
+    "QB": 4,
+    "RB": 14,
+    "WR": 14,
+    "TE": 4,
+    "K": 2,
+    "DEF": 2,
+}  # waiver level = starters + this
+BENCH_WEIGHT = 0.0  # legacy bench credit (weekly substitution now handles bench value)
 BENCH_DEPTH = 4
-REPLACEMENT_EXTRA = {"QB": 4, "RB": 14, "WR": 14, "TE": 4}  # free-agent level = starters + this
 BASELINE_DEPTH_FUZZ = 0  # reserved
 
 
@@ -105,6 +115,54 @@ def replacement_levels(league: LeagueConfig, pool: dict[str, Player]) -> dict[st
         n = demand.get(pos, 0) + REPLACEMENT_EXTRA.get(pos, 2)
         out[pos] = lst[min(n, len(lst)) - 1].value if lst else 0.0
     return out
+
+
+def sample_weeks(
+    p: Player, rng: random.Random, bye: int | None, season_factor: float
+) -> list[float]:
+    """Weekly points for one simulated season: 0 on bye or injured weeks, else ppg x noise."""
+    if p.value <= 0:
+        return [0.0] * WEEKS
+    ppg = p.value / p.expected_games * season_factor
+    miss = shrunk_miss_rate(p)
+    sigma = WEEKLY_SIGMA.get(p.pos, 0.5)
+    out = []
+    for wk in range(1, WEEKS + 1):
+        if wk == bye or rng.random() < miss:
+            out.append(0.0)
+        else:
+            out.append(ppg * math.exp(rng.gauss(-(sigma**2) / 2, sigma)))
+    return out
+
+
+def season_value(
+    players: list[Player],
+    league: LeagueConfig,
+    weekly: dict[str, list[float]],
+    replacement_ppg: dict[str, float],
+) -> float:
+    """Sum over weeks of the best lineup from the roster; empty slots get waiver replacement."""
+    slots = league.starter_slots
+    order = [s for s in slots if s not in FLEX_ELIGIBLE] + [s for s in slots if s in FLEX_ELIGIBLE]
+    total = 0.0
+    for wk in range(WEEKS):
+        avail = sorted(players, key=lambda p: -weekly[p.id][wk])
+        used: set[str] = set()
+        for s in order:
+            eligible = FLEX_ELIGIBLE.get(s, (s,))
+            best = None
+            for p in avail:
+                if p.id not in used and p.pos in eligible and weekly[p.id][wk] > 0:
+                    best = p
+                    break
+            if best is not None:
+                used.add(best.id)
+                total += weekly[best.id][wk]
+            else:
+                total += min(
+                    replacement_ppg.get(pos, 0.0) for pos in eligible
+                )  # stream a free agent
+    return total
 
 
 def lineup_value(
@@ -250,9 +308,21 @@ def _run_sim(args: tuple) -> tuple[float, int, list[str]]:
     setup, strategy, seed, i = args
     rng = random.Random(seed * 100_003 + i)
     rosters = simulate_draft(setup, strategy, rng)
-    realized = {pid: sample_season(p, rng) for pid, p in setup.pool.items()}
+    byes = {}
+    weekly: dict[str, list[float]] = {}
+    drafted = {p.id: p for ps in rosters.values() for p in ps}
+    for pid, p in drafted.items():
+        if p.team not in byes:
+            byes[p.team] = rng.choice(BYE_WEEKS)
+        season_factor = math.exp(
+            rng.gauss(-(SEASON_SIGMA.get(p.pos, 0.3) ** 2) / 4, SEASON_SIGMA.get(p.pos, 0.3) / 2)
+        )
+        weekly[pid] = sample_weeks(p, rng, byes[p.team], season_factor)
     repl = replacement_levels(setup.league, setup.pool)
-    vals = {rid: lineup_value(ps, setup.league, realized, repl) for rid, ps in rosters.items()}
+    repl_ppg = {
+        pos: v / WEEKS * 0.85 for pos, v in repl.items()
+    }  # streamed FA plays a bit worse than his season number
+    vals = {rid: season_value(ps, setup.league, weekly, repl_ppg) for rid, ps in rosters.items()}
     mine = vals[setup.my_roster_id]
     rank = 1 + sum(1 for v in vals.values() if v > mine)
     return mine, rank, [p.name for p in rosters[setup.my_roster_id]]

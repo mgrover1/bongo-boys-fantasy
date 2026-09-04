@@ -74,7 +74,9 @@ def perturb(params: dict[str, float], rng: random.Random) -> dict[str, float]:
         elif v == 0 and k in ("avail_sigma", "cliff_gap"):
             out[k] = round(rng.choice([0.0, 0.0, 6.0, 10.0, 15.0]), 3)  # sometimes switch on
         else:
-            out[k] = round(v * (1 + rng.gauss(0, SEARCH_SCALE)), 3)
+            out[k] = round(abs(v) * (1 + rng.gauss(0, SEARCH_SCALE)), 3)  # params are magnitudes
+            if k in ("wait_discount", "avail_strength"):
+                out[k] = min(out[k], 1.0)
     return out
 
 
