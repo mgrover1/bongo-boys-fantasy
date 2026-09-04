@@ -4,7 +4,7 @@
     "flex_bonus": 9.742,
     "depth_quota_rb": 4,
     "depth_quota_wr": 5,
-    "depth_quota_te": 3,
+    "depth_quota_te": 2,
     "depth_quota_qb": 2,
     "surplus_penalty": 36.068,
     "bench_bonus": 4.417,
@@ -107,6 +107,6 @@
     ],
     "screen_score": 1896.0
   },
-  "description": "autoresearch 540",
+  "description": "autoresearch 540 + TE/QB capped at 2 (no sim cost; realism)",
   "saved_at": "2026-09-04T18:52:22.881332+00:00"
 }
