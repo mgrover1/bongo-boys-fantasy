@@ -9,7 +9,8 @@ from bongo_boys.league import FLEX_ELIGIBLE
 from bongo_boys.news.collect import recent
 from bongo_boys.tools.available import report as available_report
 from bongo_boys.tools.common import Context, fmt, load_context
-from bongo_boys.tools.trades import find_trades
+from bongo_boys.tools.trades import find_trades, heat_report
+from bongo_boys.usage import MIN_SNAP_SHARE_FLAG
 
 
 def week_projections(ctx: Context, week: int) -> dict[str, dict]:
@@ -114,6 +115,8 @@ def report(week: int = 0, ctx: Context | None = None) -> str:
     dl = ctx.league.settings.get("trade_deadline")
     if dl and week > int(dl):
         lines.append("   (trade deadline passed)")
+    heat = heat_report(ctx, top=3)
+    lines.extend(s for s in heat if s.strip())
 
     lines.append("\n-- League activity this week --")
     try:
@@ -144,6 +147,16 @@ def report(week: int = 0, ctx: Context | None = None) -> str:
         todo.append("move Out/IR players to IR slot or bench; check waiver upgrades above")
     if wk and any(wk.get(p.id, {}).get("bye") for p in ctx.starters(mine)):
         todo.append("a projected starter is on bye: fix the lineup")
+    thin = [
+        p.name
+        for p in ctx.starters(mine)
+        if p.pos in ("RB", "WR", "TE")
+        and p.usage
+        and p.usage.games >= 2
+        and p.usage.recent_snap_share < MIN_SNAP_SHARE_FLAG
+    ]
+    if thin:
+        todo.append("starter snap share under 50% last two games, check role: " + ", ".join(thin))
     if not todo:
         todo.append("no urgent moves; set lineup before Thursday kickoff")
     lines.extend(f"   [ ] {t}" for t in todo)
