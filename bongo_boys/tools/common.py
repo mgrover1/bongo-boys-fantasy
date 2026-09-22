@@ -9,6 +9,7 @@ from bongo_boys.draft.prepare import baselines, lineup_value, replacement_levels
 from bongo_boys.league import LeagueConfig, Roster, fetch_rosters
 from bongo_boys.projections import Player, build_pool
 from bongo_boys.sleeper import Sleeper
+from bongo_boys.usage import attach_usage
 
 SKILL = ("QB", "RB", "WR", "TE")
 
@@ -22,6 +23,10 @@ class Context:
     base: dict[str, float]
     week: int
     my: Roster
+    weeks_done: int = 0  # completed weeks folded into rest-of-season values
+
+    def owner_of(self, pid: str) -> str:
+        return next((r.owner_name for r in self.rosters.values() if pid in r.players), "FREE")
 
     def players_of(self, roster: Roster) -> list[Player]:
         return [self.pool[p] for p in roster.players if p in self.pool]
@@ -61,10 +66,18 @@ def load_context(api: Sleeper | None = None) -> Context:
     pool = build_pool(api, league, SEASON)
     rosters = fetch_rosters(api, LEAGUE_ID)
     week = int(api.state().get("week") or 1)
-    return Context(api, league, pool, rosters, baselines(league, pool), week, rosters[MY_ROSTER_ID])
+    done = attach_usage(api, pool, league, SEASON, week) if league.status == "in_season" else 0
+    return Context(
+        api, league, pool, rosters, baselines(league, pool), week, rosters[MY_ROSTER_ID], done
+    )
 
 
 def fmt(p: Player, base: dict[str, float] | None = None) -> str:
     inj = f" [{p.injury_status}]" if p.injury_status else ""
     vbd = f" vbd {p.value - base.get(p.pos, 0):+6.1f}" if base else ""
-    return f"{p.name:<24} {p.pos:<3} {p.team or 'FA':<4} val {p.value:6.1f}{vbd} adp {p.adp:5.0f} miss {p.miss_rate:.0%}{inj}"
+    u = p.usage
+    if u and u.games:
+        use = f" snap {u.snap_share:3.0%} opp {u.opp_ppg:4.1f}/g heat {u.heat:+5.1f}"
+    else:
+        use = f" adp {p.adp:5.0f}"
+    return f"{p.name:<24} {p.pos:<3} {p.team or 'FA':<4} ros {p.value:6.1f}{vbd}{use} miss {p.miss_rate:.0%}{inj}"

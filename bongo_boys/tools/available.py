@@ -15,7 +15,7 @@ FAAB_CLASS = [
 def faab_hint(p, my_starters, base) -> str:
     worst = min((s.value for s in my_starters if s.pos == p.pos), default=0.0)
     rel = (p.value - worst) / max(worst, 1.0) if worst else 0.0
-    if p.value <= base.get(p.pos, 0) * 0.8:
+    if p.pos in ("K", "DEF") or p.value <= base.get(p.pos, 0) * 0.8:
         return "stash/streamer: $0-1"
     for thr, txt in FAAB_CLASS:
         if rel >= thr:
@@ -40,9 +40,13 @@ def report(ctx: Context | None = None, per_pos: int = 8) -> str:
     )
     ups = []
     for p in fa[:150]:
-        if p.pos not in SKILL:
+        if p.pos in SKILL:
+            drops = droppable[:3]
+        elif p.pos in ("K", "DEF"):
+            drops = [d for d in mine if d.pos == p.pos]
+        else:
             continue
-        for d in droppable[:3]:
+        for d in drops:
             gain = ctx.team_value([x for x in mine if x.id != d.id] + [p]) - my_value
             if gain > 2:
                 ups.append((gain, p, d))

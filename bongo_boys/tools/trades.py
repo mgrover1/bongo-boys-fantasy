@@ -5,6 +5,7 @@ from __future__ import annotations
 from itertools import combinations
 
 from bongo_boys.tools.common import SKILL, Context, fmt, load_context
+from bongo_boys.usage import heat_lists
 
 MIN_MY_GAIN = 3.0
 MAX_THEIR_LOSS = 4.0  # offers must be defensible: their lineup value drops by at most this
@@ -92,7 +93,27 @@ def report(ctx: Context | None = None, partner: str | None = None, top: int = 15
         lines.append(
             f"  me +{t['my_gain']:5.1f} / them {t['their_gain']:+5.1f}  to {t['roster'].owner_name:<18} give {give}  for {get}"
         )
+    lines.extend(heat_report(ctx))
     lines.append("\n-- My roster --")
     for p in sorted(ctx.players_of(ctx.my), key=lambda p: -p.value):
         lines.append("   " + fmt(p, ctx.base))
     return "\n".join(lines)
+
+
+def heat_report(ctx: Context, top: int = 8) -> list[str]:
+    """Sell-high / buy-low lists: scoring far above or below what snaps and touches imply."""
+    if not ctx.weeks_done:
+        return []
+    hot, cold = heat_lists(ctx.pool)
+    mine = set(ctx.my.players)
+
+    def line(p) -> str:
+        u = p.usage
+        who = "ME" if p.id in mine else ctx.owner_of(p.id)
+        return f"   {p.name:<22} {p.pos:<3} {p.team or 'FA':<4} heat {u.heat:+5.1f}  snap {u.snap_share:3.0%}  opp {u.opp_ppg:4.1f}/g  {who}"
+
+    out = [f"\n-- Sell high: scoring well above usage ({ctx.weeks_done} wk) --"]
+    out.extend([line(p) for p in hot[:top]] or ["   none"])
+    out.append("\n-- Buy low: usage well above scoring --")
+    out.extend([line(p) for p in cold[:top]] or ["   none"])
+    return out

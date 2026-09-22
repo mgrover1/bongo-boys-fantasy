@@ -9,7 +9,10 @@ from bongo_boys.league import FLEX_ELIGIBLE
 from bongo_boys.news.collect import recent
 from bongo_boys.tools.available import report as available_report
 from bongo_boys.tools.common import Context, fmt, load_context
-from bongo_boys.tools.trades import find_trades
+from bongo_boys.tools.trades import find_trades, heat_report
+from bongo_boys.usage import GAMES, INJURY_WEIGHT, MIN_SNAP_SHARE_FLAG
+
+SLEEPER_WEIGHT = 0.5  # lineup score = this x Sleeper weekly proj + rest x our usage-based ppg
 
 
 def week_projections(ctx: Context, week: int) -> dict[str, dict]:
@@ -26,10 +29,23 @@ def week_projections(ctx: Context, week: int) -> dict[str, dict]:
     return out
 
 
+def ros_ppg(ctx: Context, p) -> float:
+    """Per-game points implied by our rest-of-season value (usage-blended in season)."""
+    games = (GAMES - ctx.weeks_done) * (1 - INJURY_WEIGHT * p.miss_rate)
+    return p.value / games if games > 0 else 0.0
+
+
+def lineup_pts(ctx: Context, p, wk: dict[str, dict]) -> float:
+    info = wk.get(p.id)
+    if not info or info.get("bye"):
+        return 0.0
+    return SLEEPER_WEIGHT * info["pts"] + (1 - SLEEPER_WEIGHT) * ros_ppg(ctx, p)
+
+
 def best_weekly_lineup(
     ctx: Context, players, wk: dict[str, dict]
 ) -> list[tuple[str, object, float]]:
-    remaining = sorted(players, key=lambda p: -wk.get(p.id, {}).get("pts", 0.0))
+    remaining = sorted(players, key=lambda p: -lineup_pts(ctx, p, wk))
     used, out = set(), []
     slots = ctx.league.starter_slots
     for s in [s for s in slots if s not in FLEX_ELIGIBLE] + [
@@ -38,7 +54,7 @@ def best_weekly_lineup(
         for p in remaining:
             if p.id not in used and p.pos in FLEX_ELIGIBLE.get(s, (s,)):
                 used.add(p.id)
-                out.append((s, p, wk.get(p.id, {}).get("pts", 0.0)))
+                out.append((s, p, lineup_pts(ctx, p, wk)))
                 break
     return out
 
@@ -73,7 +89,9 @@ def report(week: int = 0, ctx: Context | None = None) -> str:
 
     wk = week_projections(ctx, week)
     if wk:
-        lines.append(f"\n-- Suggested lineup for week {week} (weekly projections, PPR) --")
+        lines.append(
+            f"\n-- Suggested lineup for week {week} (Sleeper weekly proj blended with usage ppg) --"
+        )
         cur = set(my.starters)
         total = 0.0
         for slot, p, pts in best_weekly_lineup(ctx, mine, wk):
@@ -92,8 +110,7 @@ def report(week: int = 0, ctx: Context | None = None) -> str:
         if byes:
             lines.append("   on bye: " + ", ".join(byes))
         lines.append(
-            "   bench: "
-            + ", ".join(f"{p.name} {wk.get(p.id, {}).get('pts', 0):.1f}" for p in bench)
+            "   bench: " + ", ".join(f"{p.name} {lineup_pts(ctx, p, wk):.1f}" for p in bench)
         )
 
     lines.append("\n-- Waiver targets (top upgrades) --")
@@ -114,6 +131,8 @@ def report(week: int = 0, ctx: Context | None = None) -> str:
     dl = ctx.league.settings.get("trade_deadline")
     if dl and week > int(dl):
         lines.append("   (trade deadline passed)")
+    heat = heat_report(ctx, top=3)
+    lines.extend(s for s in heat if s.strip())
 
     lines.append("\n-- League activity this week --")
     try:
@@ -144,6 +163,16 @@ def report(week: int = 0, ctx: Context | None = None) -> str:
         todo.append("move Out/IR players to IR slot or bench; check waiver upgrades above")
     if wk and any(wk.get(p.id, {}).get("bye") for p in ctx.starters(mine)):
         todo.append("a projected starter is on bye: fix the lineup")
+    thin = [
+        p.name
+        for p in ctx.starters(mine)
+        if p.pos in ("RB", "WR", "TE")
+        and p.usage
+        and p.usage.games >= 2
+        and p.usage.recent_snap_share < MIN_SNAP_SHARE_FLAG
+    ]
+    if thin:
+        todo.append("starter snap share under 50% last two games, check role: " + ", ".join(thin))
     if not todo:
         todo.append("no urgent moves; set lineup before Thursday kickoff")
     lines.extend(f"   [ ] {t}" for t in todo)

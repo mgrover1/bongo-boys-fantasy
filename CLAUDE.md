@@ -48,6 +48,7 @@ Base `https://api.sleeper.app/v1`. All endpoints are plain GET returning JSON.
 /players/nfl                             -> ~12k players, ~15 MB; cache to disk, refresh at most daily
 /players/nfl/trending/add?lookback_hours=24&limit=25   -> waiver heat
 /state/nfl                               -> current week/season
+/stats/nfl/regular/<season>/<week>       -> per-player weekly stats: off_snp, tm_off_snp, rec_tgt, rush_att, rz, pts_ppr
 ```
 
 Player ids are strings (`"7525"`); team defenses use the team abbreviation (`"BAL"`). `players/nfl` entries carry `full_name`, `position`, `fantasy_positions`, `team`, `age`, `injury_status`, `status`, `search_rank` (Sleeper's overall rank, useful as an ADP proxy). Sleeper rate-limits around 1000 calls/minute; never poll `players/nfl` in a loop.
@@ -62,6 +63,7 @@ bongo_boys/
   league.py            LeagueConfig, Roster, DraftState (snake math, traded picks, keepers)
   projections.py       Player pool: Rotowire season projections re-scored with league scoring,
                        Sleeper PPR ADP, 2023-25 stats, injury history -> `value`
+  usage.py             in-season: weekly snaps/targets/carries -> rest-of-season `value`, heat
   draft/
     prepare.py         FIXED sim harness: opponent model, season sampler, lineup metric, evaluate()
     strategy.py        EDITABLE policy (VBD + needs + wait discount); PARAMS dict is tunable
@@ -106,6 +108,18 @@ Everything reads live Sleeper state. Cached responses have per-endpoint TTLs; de
 season's per-game output (if >= 6 games). Expected games = 17 x (1 - 0.6 x miss rate over
 2023-25). The sim harness additionally samples games from a shrunk miss rate and lognormal
 per-game noise, so injury-prone players are penalised twice: in value and in variance.
+
+In season (`league.status == in_season`), `tools/common.load_context` calls `usage.attach_usage`,
+which rewrites `Player.value` to a rest-of-season number and keeps the preseason one in
+`pre_value`. Per player, over the trailing 4 completed weeks: snap share, targets, carries and
+red-zone touches per game, actual points per game (league scoring), and an opportunity-implied
+ppg (targets x 1.55-1.75, carries x 0.62, RZ touches +1.2; QB pass att x 0.48, rushes x 0.75).
+`heat` = actual - opportunity ppg: positive is a sell-high, negative a buy-low. The in-season
+component is 70% opportunity / 30% actual; its weight in the blend ramps 0.12 per completed week
+to a 0.65 cap (week 6), and remaining games shrink each week. A week counts as complete only
+when every team with a scheduled game has posted offensive snaps, so Monday-night stragglers
+do not pollute the numbers. Constants live at the top of `usage.py`. The draft harness never
+sees any of this.
 
 ## Autoresearch protocol (adapted from autoresearch-mlx)
 

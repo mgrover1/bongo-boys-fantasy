@@ -76,6 +76,11 @@ class Sleeper:
     def players(self) -> dict[str, dict]:
         return self.get(f"{V1}/players/nfl", ttl=DAY)
 
+    def week_stats(self, season: str, week: int, current_week: int) -> dict[str, dict]:
+        """Per-player raw stats for one week, keyed by player id (snaps, targets, carries, pts)."""
+        ttl = 3600 if week >= current_week else 7 * DAY
+        return self.get(f"{V1}/stats/nfl/regular/{season}/{week}", ttl=ttl)
+
     def trending(self, kind: str = "add", hours: int = 24, limit: int = 50) -> list[dict]:
         url = f"{V1}/players/nfl/trending/{kind}?lookback_hours={hours}&limit={limit}"
         return self.get(url, ttl=1800)

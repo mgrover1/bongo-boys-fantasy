@@ -39,6 +39,8 @@ class Player:
     games_missed: int = 0
     games_possible: int = 0
     value: float = 0.0  # injury-adjusted, prior-blended season points (the number tools rank on)
+    pre_value: float = 0.0  # preseason value, kept when in-season usage rewrites `value`
+    usage: object | None = None  # bongo_boys.usage.Usage once attach_usage() has run
 
     @property
     def proj_ppg(self) -> float:
