@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bongo_boys.tools.common import SKILL, Context, fmt, load_context
+from bongo_boys.tools.common import LONG_TERM, SKILL, Context, fmt, load_context
 
 FAAB_CLASS = [
     (0.20, "league-winner? verify role: 55-85% of remaining FAAB"),
@@ -40,7 +40,7 @@ def report(ctx: Context | None = None, per_pos: int = 8) -> str:
     )
     ups = []
     for p in fa[:150]:
-        if p.pos not in SKILL:
+        if p.pos not in SKILL or p.injury_status in LONG_TERM:
             continue
         for d in droppable[:3]:
             gain = ctx.team_value([x for x in mine if x.id != d.id] + [p]) - my_value

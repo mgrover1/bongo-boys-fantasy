@@ -8,7 +8,7 @@ from bongo_boys import DRAFT_ID, LEAGUE_ID, SEASON
 from bongo_boys.league import FLEX_ELIGIBLE
 from bongo_boys.news.collect import recent
 from bongo_boys.tools.available import report as available_report
-from bongo_boys.tools.common import Context, fmt, load_context
+from bongo_boys.tools.common import INACTIVE, Context, fmt, load_context
 from bongo_boys.tools.trades import find_trades
 
 
@@ -16,12 +16,13 @@ def week_projections(ctx: Context, week: int) -> dict[str, dict]:
     out = {}
     for row in ctx.api.week_projections(SEASON, week):
         st = row.get("stats") or {}
-        if st.get("pts_ppr") is None:
+        bye = row.get("game_id") is None
+        if st.get("pts_ppr") is None and not bye:
             continue
         out[row["player_id"]] = {
-            "pts": float(st["pts_ppr"]),
+            "pts": 0.0 if bye else float(st["pts_ppr"]),
             "opp": row.get("opponent"),
-            "bye": row.get("game_id") is None,
+            "bye": bye,
         }
     return out
 
@@ -29,7 +30,10 @@ def week_projections(ctx: Context, week: int) -> dict[str, dict]:
 def best_weekly_lineup(
     ctx: Context, players, wk: dict[str, dict]
 ) -> list[tuple[str, object, float]]:
-    remaining = sorted(players, key=lambda p: -wk.get(p.id, {}).get("pts", 0.0))
+    remaining = sorted(
+        (p for p in players if p.injury_status not in INACTIVE),
+        key=lambda p: -wk.get(p.id, {}).get("pts", 0.0),
+    )
     used, out = set(), []
     slots = ctx.league.starter_slots
     for s in [s for s in slots if s not in FLEX_ELIGIBLE] + [

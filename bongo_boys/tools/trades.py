@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from itertools import combinations
 
-from bongo_boys.tools.common import SKILL, Context, fmt, load_context
+from bongo_boys.tools.common import LONG_TERM, SKILL, Context, fmt, load_context
 
 MIN_MY_GAIN = 3.0
 MAX_THEIR_LOSS = 4.0  # offers must be defensible: their lineup value drops by at most this
@@ -38,7 +38,10 @@ def find_trades(ctx: Context, partner: int | None = None) -> list[dict]:
             continue
         theirs = ctx.players_of(r)
         their_val = ctx.team_value(theirs)
-        their_cands = sorted((p for p in theirs if p.pos in SKILL), key=lambda p: -p.value)[:TOP_N]
+        their_cands = sorted(
+            (p for p in theirs if p.pos in SKILL and p.injury_status not in LONG_TERM),
+            key=lambda p: -p.value,
+        )[:TOP_N]
         give_sets = [(a,) for a in my_cands] + list(combinations(my_cands, 2))
         get_sets = [(b,) for b in their_cands] + list(combinations(their_cands, 2))
         for give in give_sets:

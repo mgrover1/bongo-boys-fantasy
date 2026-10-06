@@ -11,6 +11,8 @@ from bongo_boys.projections import Player, build_pool
 from bongo_boys.sleeper import Sleeper
 
 SKILL = ("QB", "RB", "WR", "TE")
+INACTIVE = ("Out", "IR", "Doubtful", "PUP", "Sus")  # won't play this week
+LONG_TERM = ("IR", "PUP", "Sus")  # multi-week absences; not waiver upgrades
 
 
 @dataclass
